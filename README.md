@@ -1,2 +1,4 @@
 # emptyspace
-Semi realtime 4x single player game.
+Realtime 4x Space Game
+
+# Dont expect fast progress.

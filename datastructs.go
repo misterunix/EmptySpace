@@ -1,4 +1,4 @@
-package datastructs
+package main
 
 // Main data structure for the players.
 type Planet struct {
@@ -34,5 +34,8 @@ type DBPlayer struct {
 	Name        string
 	Username    string
 	Password    string
+	Email       string
 	HomeWorldID int
+	AI          bool
+	Race        int
 }

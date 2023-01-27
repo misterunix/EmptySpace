@@ -3,10 +3,10 @@ package main
 import (
 	"crypto/sha256"
 	"database/sql"
+	"log"
 	"reflect"
 
 	"fmt"
-	"math/rand"
 	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -17,7 +17,6 @@ var database *sql.DB   // Database connection
 var Systems []System   // All systems in the universe
 var Planets []Planet   // All planets in the universe
 var Players []DBPlayer // All players in the universe. Including NPCs
-var rnd = rand.New(rand.NewSource(1))
 
 func NewPlanet() Planet {
 	p := Planet{}
@@ -104,6 +103,7 @@ func CreateUniverse(universesystems int) {
 			name := "System " + strconv.Itoa(i) + " Planet " + strconv.Itoa(j)
 			pl.Name = name
 			pl.PType = rnd.Intn(9) + 1
+			pl.PlayerID = -1
 			Planets = append(Planets, pl)
 			planetcount++
 		}
@@ -115,30 +115,43 @@ func CreateUniverse(universesystems int) {
 	fmt.Println("Planet Count:", planetcount)
 
 	player := NewDBPlayer()
+	player.ID = 0
 	player.Name = "Unknown"
-	player.HomeWorldID = 0
+	player.HomeWorldID = rnd.Intn(planetcount)
 	player.Username = "Unknown"
 	player.Password = "Unknown"
 	player.Race = 0
+	player.Email = "no@nope.com"
 	player.AI = false
 	Players = append(Players, player)
+	Planets[player.HomeWorldID].PlayerID = player.ID
 
 	fmt.Println("Creating a few NPCs. Player 0 is always human player.")
-	pc := rnd.Intn(3) + 1
+	pc := rnd.Intn(3) + 5
+	fmt.Println("Number of NPCs:", pc)
 	for i := 1; i < pc; i++ {
+		fmt.Print(i, " ")
 		np := NewDBPlayer()
-		np.Name = "AI_ " + strconv.Itoa(i)
+		np.ID = i
+		np.Name = "AI_" + strconv.Itoa(i)
 		np.HomeWorldID = rnd.Intn(planetcount)
 		np.Username = "AI_" + strconv.Itoa(i)
 		np.Race = rnd.Intn(9) + 1
+		np.Email = "ai@skynet.net"
 		sha := sha256.New()
 		sha.Write([]byte("BadPassword"))
-		cp := fmt.Sprintf("%x\n", sha.Sum(nil))
+		cp := fmt.Sprintf("%x", sha.Sum(nil))
 		np.Password = cp
+		fmt.Println(np)
 		Players = append(Players, np)
-		fmt.Println(np.Name, np.Password)
+		//fmt.Println(np.Name, np.Password)
 		Planets[np.HomeWorldID].PlayerID = i
 	}
+	fmt.Println()
+	fmt.Println("Saving systems to DB")
+	InsertSystems()
+	InsertPlanets()
+	InsertPlayers()
 
 }
 
@@ -164,6 +177,8 @@ func CreateTableFromStruct(table string, s interface{}) string {
 			vt = "TEXT"
 		case reflect.Float64:
 			vt = "REAL"
+		case reflect.Bool:
+			vt = "INTEGER"
 		}
 		sqlstatement += vt
 	}
@@ -173,6 +188,170 @@ func CreateTableFromStruct(table string, s interface{}) string {
 	sqlstatement = sqlstatement1 + sqlstatement
 
 	return sqlstatement
+
+}
+
+func InsertSystems() {
+	fmt.Println("InsertSystems")
+	o := "BEGIN;\n"
+	beginstatement, err := database.Prepare(o)
+	if err != nil {
+		log.Panicln(err)
+	}
+	_, err = beginstatement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	for _, v := range Systems {
+		//fmt.Println("Inserting system", ind)
+		var ssql, vsql string
+		e := reflect.ValueOf(&v).Elem()
+		for i := 0; i < e.NumField(); i++ {
+			varName := e.Type().Field(i).Name
+			ssql += "," + varName
+			varValue := e.Field(i).Interface()
+			vv := fmt.Sprintf("%v", varValue)
+			varType := e.Type().Field(i).Type
+			switch varType.Name() {
+			case "int":
+				vsql += "," + vv
+			case "string":
+				vsql += "," + "'" + vv + "'"
+			}
+		}
+		ssql = ssql[1:]
+		vsql = vsql[1:]
+		sqlstatement := "INSERT INTO system( " + ssql + " ) VALUES(" + vsql + ")"
+		//fmt.Println(sqlstatement)
+		statement, _ := database.Prepare(sqlstatement)
+		statement.Exec()
+	}
+
+	o = "COMMIT;\n"
+	commitstatement, err := database.Prepare(o)
+	if err != nil {
+		log.Panicln(err)
+	}
+	_, err = commitstatement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
+
+}
+
+func InsertPlanets() {
+	fmt.Println("Inserting planets")
+	o := "BEGIN;\n"
+	beginstatement, err := database.Prepare(o)
+	if err != nil {
+		log.Panicln(err)
+	}
+	_, err = beginstatement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	for _, v := range Planets {
+		//fmt.Println("Inserting plantes", ind)
+		var ssql, vsql string
+		e := reflect.ValueOf(&v).Elem()
+		for i := 0; i < e.NumField(); i++ {
+			varName := e.Type().Field(i).Name
+			ssql += "," + varName
+			varValue := e.Field(i).Interface()
+			vv := fmt.Sprintf("%v", varValue)
+			varType := e.Type().Field(i).Type
+			switch varType.Name() {
+			case "int":
+				vsql += "," + vv
+			case "string":
+				vsql += "," + "'" + vv + "'"
+			}
+		}
+		ssql = ssql[1:]
+		vsql = vsql[1:]
+		sqlstatement := "INSERT INTO planet( " + ssql + " ) VALUES(" + vsql + ")"
+		//fmt.Println(sqlstatement)
+		statement, err := database.Prepare(sqlstatement)
+		if err != nil {
+			log.Panicln(err)
+		}
+		statement.Exec()
+	}
+
+	o = "COMMIT;\n"
+	commitstatement, err := database.Prepare(o)
+	if err != nil {
+		log.Panicln(err)
+	}
+	_, err = commitstatement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
+
+}
+func InsertPlayers() {
+	fmt.Println("Inserting players")
+	fmt.Println("Count:", len(Players))
+
+	o := "BEGIN;\n"
+	beginstatement, err := database.Prepare(o)
+	if err != nil {
+		log.Panicln(err)
+	}
+	_, err = beginstatement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	for ind, v := range Players {
+		fmt.Println("Inserting players", ind)
+		//fmt.Println("v:", v.ID)
+
+		var ssql, vsql string
+		e := reflect.ValueOf(&v).Elem()
+		for i := 0; i < e.NumField(); i++ {
+			varName := e.Type().Field(i).Name
+			ssql += "," + varName
+			varValue := e.Field(i).Interface()
+			vv := fmt.Sprintf("%v", varValue)
+			varType := e.Type().Field(i).Type
+			//fmt.Println(vsql, vv, varType.Name())
+			switch varType.Name() {
+			case "bool":
+				vsql += "," + vv
+			case "int":
+				vsql += "," + vv
+			case "string":
+				vsql += "," + "'" + vv + "'"
+			}
+		}
+		ssql = ssql[1:]
+		vsql = vsql[1:]
+		sqlstatement := "INSERT INTO player( " + ssql + " ) VALUES(" + vsql + ")"
+		fmt.Println(sqlstatement)
+		statement, err := database.Prepare(sqlstatement)
+		if err != nil {
+			log.Panicln(err)
+		}
+		r, err := statement.Exec()
+		fmt.Println(r)
+		if err != nil {
+			log.Panicln(err)
+		}
+
+	}
+
+	o = "COMMIT;\n"
+	commitstatement, err := database.Prepare(o)
+	if err != nil {
+		log.Panicln(err)
+	}
+	_, err = commitstatement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
 
 }
 
@@ -201,30 +380,5 @@ func CreateNewDB() {
 	t = CreateTableFromStruct("player", DBPlayer{})
 	statement, _ = database.Prepare(t)
 	statement.Exec()
-	/**
-	// this is a hack to create the table based on the struct
-	tsystem := NewSystem() // temporary system
-	e := reflect.ValueOf(&tsystem).Elem()
-	for i := 0; i < e.NumField(); i++ {
-		var vt string
-		varName := e.Type().Field(i).Name
-		sqlstatement += "," + varName + " "
-		varType := e.Type().Field(i).Type
-		switch varType.Name() {
-		case "int":
-			if varName == "ID" {
-				vt = "INTEGER NOT NULL PRIMARY KEY"
-			} else {
-				vt = "INTEGER"
-			}
-		case "string":
-			vt = "TEXT"
-		}
-		sqlstatement += vt
-	}
-	sqlstatement = sqlstatement[1:]
-	//fmt.Println(sqlstatement)
-	statement, _ = database.Prepare("CREATE TABLE IF NOT EXISTS system (" + sqlstatement + ")")
-	statement.Exec()
-	*/
+
 }

@@ -56,13 +56,18 @@ func NewDBPlayer() DBPlayer {
 // Number of systems and planets are created based on the input 'universesystems'
 func CreateUniverse(universesystems int) {
 	fmt.Println("Creating systems in memory")
+	fmt.Println("universesystems:", universesystems)
+	universesize := int(float64(universesystems) * 0.5)
+	fmt.Println("universesize:", universesize)
+	universefog := int(float64(universesize) * 0.03)
+	fmt.Println("universefog:", universefog)
 
 	for i := 0; i < universesystems; i++ {
 		s := NewSystem()
 		s.ID = i
 		for {
-			s.Q = rnd.Intn(299) + 1 // 1-300
-			s.R = rnd.Intn(299) + 1 // 1-300
+			s.Q = rnd.Intn(universesize) + 1
+			s.R = rnd.Intn(universesize) + 1
 			A := hexgrid.NewHex(s.Q, s.R)
 			var bad bool
 			if i > 0 {
@@ -72,7 +77,7 @@ func CreateUniverse(universesystems int) {
 					}
 					B := hexgrid.NewHex(Systems[j].Q, Systems[j].R)
 					C := hexgrid.HexDistance(A, B)
-					if C > 10 {
+					if C > universefog {
 						bad = false
 						break // Might have broken code here
 					} else {
@@ -142,7 +147,7 @@ func CreateUniverse(universesystems int) {
 		sha.Write([]byte("BadPassword"))
 		cp := fmt.Sprintf("%x", sha.Sum(nil))
 		np.Password = cp
-		fmt.Println(np)
+		//fmt.Println(np)
 		Players = append(Players, np)
 		//fmt.Println(np.Name, np.Password)
 		Planets[np.HomeWorldID].PlayerID = i
@@ -305,8 +310,8 @@ func InsertPlayers() {
 		log.Panicln(err)
 	}
 
-	for ind, v := range Players {
-		fmt.Println("Inserting players", ind)
+	for _, v := range Players {
+		//fmt.Println("Inserting players", ind)
 		//fmt.Println("v:", v.ID)
 
 		var ssql, vsql string
@@ -330,13 +335,12 @@ func InsertPlayers() {
 		ssql = ssql[1:]
 		vsql = vsql[1:]
 		sqlstatement := "INSERT INTO player( " + ssql + " ) VALUES(" + vsql + ")"
-		fmt.Println(sqlstatement)
+		//fmt.Println(sqlstatement)
 		statement, err := database.Prepare(sqlstatement)
 		if err != nil {
 			log.Panicln(err)
 		}
-		r, err := statement.Exec()
-		fmt.Println(r)
+		_, err = statement.Exec()
 		if err != nil {
 			log.Panicln(err)
 		}
@@ -360,25 +364,43 @@ func CreateNewDB() {
 	database, _ = sql.Open("sqlite3", "sqldata/emptyspace.db") // this should be in a config file
 
 	statement, _ := database.Prepare("DROP TABLE IF EXISTS system")
-	statement.Exec()
+	_, err := statement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	statement, _ = database.Prepare("DROP TABLE IF EXISTS planet")
-	statement.Exec()
+	_, err = statement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	statement, _ = database.Prepare("DROP TABLE IF EXISTS player")
-	statement.Exec()
+	_, err = statement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	t := CreateTableFromStruct("system", System{})
-	fmt.Println(t)
+	//fmt.Println(t)
 	statement, _ = database.Prepare(t)
-	statement.Exec()
+	_, err = statement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	t = CreateTableFromStruct("planet", Planet{})
 	statement, _ = database.Prepare(t)
-	statement.Exec()
+	_, err = statement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	t = CreateTableFromStruct("player", DBPlayer{})
 	statement, _ = database.Prepare(t)
-	statement.Exec()
+	_, err = statement.Exec()
+	if err != nil {
+		log.Panicln(err)
+	}
 
 }

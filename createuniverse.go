@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"log"
-	"reflect"
 
 	"fmt"
 	"strconv"
@@ -160,44 +159,13 @@ func CreateUniverse(universesystems int) {
 
 }
 
-// Create table based on struct. This is a work in progress.
-func CreateTableFromStruct(table string, s interface{}) string {
-	var e reflect.Value = reflect.ValueOf(s)
-	var sqlstatement string
-	sqlstatement1 := "CREATE TABLE IF NOT EXISTS " + table + " ("
-	for i := 0; i < e.NumField(); i++ {
-		var vt string
-		varName := e.Type().Field(i).Name
-		sqlstatement += "," + varName + " "
-		//sqlstatement += varName + " "
-		varType := e.Type().Field(i).Type
-		switch varType.Kind() {
-		case reflect.Int:
-			if varName == "ID" {
-				vt = "INTEGER NOT NULL PRIMARY KEY"
-			} else {
-				vt = "INTEGER"
-			}
-		case reflect.String:
-			vt = "TEXT"
-		case reflect.Float64:
-			vt = "REAL"
-		case reflect.Bool:
-			vt = "INTEGER"
-		}
-		sqlstatement += vt
-	}
-	// such a crappy way to do this
-	sqlstatement = sqlstatement[1:]
-	sqlstatement += ")"
-	sqlstatement = sqlstatement1 + sqlstatement
-
-	return sqlstatement
-
-}
-
+// Insert systems into the database. This sub function is needed to loop over the slice of systems.
+// Easier to do it this way than to try to loop over the slice in the main function.
 func InsertSystems() {
+
 	fmt.Println("InsertSystems")
+
+	// Begin and Commit are needed to speed up the insert process.
 	o := "BEGIN;\n"
 	beginstatement, err := database.Prepare(o)
 	if err != nil {
@@ -209,27 +177,9 @@ func InsertSystems() {
 	}
 
 	for _, v := range Systems {
-		//fmt.Println("Inserting system", ind)
-		var ssql, vsql string
-		e := reflect.ValueOf(&v).Elem()
-		for i := 0; i < e.NumField(); i++ {
-			varName := e.Type().Field(i).Name
-			ssql += "," + varName
-			varValue := e.Field(i).Interface()
-			vv := fmt.Sprintf("%v", varValue)
-			varType := e.Type().Field(i).Type
-			switch varType.Name() {
-			case "int":
-				vsql += "," + vv
-			case "string":
-				vsql += "," + "'" + vv + "'"
-			}
-		}
-		ssql = ssql[1:]
-		vsql = vsql[1:]
-		sqlstatement := "INSERT INTO system( " + ssql + " ) VALUES(" + vsql + ")"
-		//fmt.Println(sqlstatement)
-		statement, _ := database.Prepare(sqlstatement)
+		tmpsql := InsertIntoTable("system", v)
+		//fmt.Println(tmpsql)
+		statement, _ := database.Prepare(tmpsql)
 		statement.Exec()
 	}
 
@@ -246,7 +196,10 @@ func InsertSystems() {
 }
 
 func InsertPlanets() {
+
 	fmt.Println("Inserting planets")
+
+	// Begin and Commit are needed to speed up the insert process.
 	o := "BEGIN;\n"
 	beginstatement, err := database.Prepare(o)
 	if err != nil {
@@ -258,30 +211,9 @@ func InsertPlanets() {
 	}
 
 	for _, v := range Planets {
-		//fmt.Println("Inserting plantes", ind)
-		var ssql, vsql string
-		e := reflect.ValueOf(&v).Elem()
-		for i := 0; i < e.NumField(); i++ {
-			varName := e.Type().Field(i).Name
-			ssql += "," + varName
-			varValue := e.Field(i).Interface()
-			vv := fmt.Sprintf("%v", varValue)
-			varType := e.Type().Field(i).Type
-			switch varType.Name() {
-			case "int":
-				vsql += "," + vv
-			case "string":
-				vsql += "," + "'" + vv + "'"
-			}
-		}
-		ssql = ssql[1:]
-		vsql = vsql[1:]
-		sqlstatement := "INSERT INTO planet( " + ssql + " ) VALUES(" + vsql + ")"
-		//fmt.Println(sqlstatement)
-		statement, err := database.Prepare(sqlstatement)
-		if err != nil {
-			log.Panicln(err)
-		}
+		tmpsql := InsertIntoTable("planet", v)
+		//fmt.Println(tmpsql)
+		statement, _ := database.Prepare(tmpsql)
 		statement.Exec()
 	}
 
@@ -296,10 +228,13 @@ func InsertPlanets() {
 	}
 
 }
+
 func InsertPlayers() {
+
 	fmt.Println("Inserting players")
 	fmt.Println("Count:", len(Players))
 
+	// Begin and Commit are needed to speed up the insert process.
 	o := "BEGIN;\n"
 	beginstatement, err := database.Prepare(o)
 	if err != nil {
@@ -311,40 +246,10 @@ func InsertPlayers() {
 	}
 
 	for _, v := range Players {
-		//fmt.Println("Inserting players", ind)
-		//fmt.Println("v:", v.ID)
-
-		var ssql, vsql string
-		e := reflect.ValueOf(&v).Elem()
-		for i := 0; i < e.NumField(); i++ {
-			varName := e.Type().Field(i).Name
-			ssql += "," + varName
-			varValue := e.Field(i).Interface()
-			vv := fmt.Sprintf("%v", varValue)
-			varType := e.Type().Field(i).Type
-			//fmt.Println(vsql, vv, varType.Name())
-			switch varType.Name() {
-			case "bool":
-				vsql += "," + vv
-			case "int":
-				vsql += "," + vv
-			case "string":
-				vsql += "," + "'" + vv + "'"
-			}
-		}
-		ssql = ssql[1:]
-		vsql = vsql[1:]
-		sqlstatement := "INSERT INTO player( " + ssql + " ) VALUES(" + vsql + ")"
-		//fmt.Println(sqlstatement)
-		statement, err := database.Prepare(sqlstatement)
-		if err != nil {
-			log.Panicln(err)
-		}
-		_, err = statement.Exec()
-		if err != nil {
-			log.Panicln(err)
-		}
-
+		tmpsql := InsertIntoTable("player", v)
+		//fmt.Println(tmpsql)
+		statement, _ := database.Prepare(tmpsql)
+		statement.Exec()
 	}
 
 	o = "COMMIT;\n"

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"log"
+	"math"
 	"math/rand"
 
 	"fmt"
@@ -129,11 +130,17 @@ func CreateUniverse(universesystems int) {
 
 	fmt.Println("Planet Count:", planetcount)
 
+	// calculate the minumum distance between players.
+	// This is used to make sure players are not too close to each other.
+	// This is not perfect, but it works for now.
+	minDistance := int(math.Sqrt(float64(universesystems)))
+
 	// Human player
 	player := NewDBPlayer()
 	player.ID = 0
 	player.Name = "Unknown"
 	player.HomeWorldID = rnd.Intn(planetcount) // Random home world. This is the GlobalID of the planet.
+	//tmpSystemID := GetSystemIDFromGlobalID(player.HomeWorldID)
 	player.Username = "Unknown"
 	player.Password = "Unknown"
 	player.Race = 0
@@ -148,6 +155,29 @@ func CreateUniverse(universesystems int) {
 	fmt.Println("Number of NPCs:", pc)
 	for i := 1; i < pc; i++ {
 		fmt.Print(i, " ")
+
+		// Start with a random planet and check if is the minDistance away from all other players.
+		for {
+			tmpRandPlanet := rnd.Intn(planetcount)
+			tmpSystemID := GetSystemIDFromGlobalID(tmpRandPlanet)
+			A := hexgrid.NewHex(Systems[tmpSystemID].Q, Systems[tmpSystemID].R)
+			var abort bool = false
+			for _, loopPlayer := range Players {
+				t1 := loopPlayer.HomeWorldID
+				t2 := GetSystemIDFromGlobalID(t1)
+				B := hexgrid.NewHex(Systems[t2].Q, Systems[t2].R)
+				C := hexgrid.HexDistance(A, B)
+				if C >= minDistance {
+					abort = true
+				} else {
+					abort = false
+					break
+				}
+			}
+			if abort {
+				break
+			}
+		}
 
 		// Set the player to be X from another player.
 

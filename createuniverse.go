@@ -51,6 +51,7 @@ func NewDBPlayer() DBPlayer {
 	return p
 }
 
+// Create the universe in memory to make it faster and easier to check for collisions.
 // Populate items in the database.
 // Creates a new database if one does not exist.
 // Number of systems and planets are created based on the input 'universesystems'
@@ -67,66 +68,72 @@ func CreateUniverse(universesystems int) {
 	universefog := int(float64(universesize) * 0.03) // How far away systems can be from each other
 	fmt.Println("Universe Fog:", universefog)
 
+	// Loop through the number of systems to create
 	for i := 0; i < universesystems; i++ {
-		s := NewSystem()
-		s.ID = i
-		for {
+		s := NewSystem() // Create a new system
+		s.ID = i         // Set the ID to the current loop number
+
+		for { // Loop until we find a good location for the system
+
+			// Set a temporary Q,R location
 			s.Q = rnd.Intn(universesize) + 1
 			s.R = rnd.Intn(universesize) + 1
-			A := hexgrid.NewHex(s.Q, s.R)
-			var bad bool
+			A := hexgrid.NewHex(s.Q, s.R) // Create a new hexgrid location
+
+			var bad bool // bad location flag, set to true if we find a bad location
 			if i > 0 {
 				for j := 0; j < i; j++ {
-					if i == j {
+					if i == j { // Cant compare to itself
 						continue
 					}
-					B := hexgrid.NewHex(Systems[j].Q, Systems[j].R)
-					C := hexgrid.HexDistance(A, B)
-					if C > universefog {
+
+					B := hexgrid.NewHex(Systems[j].Q, Systems[j].R) // Create a new hexgrid location, based on the system we are comparing to. Limited by the current loop number
+					C := hexgrid.HexDistance(A, B)                  // Get the distance between the two hexgrid locations
+
+					if C > universefog { // If the distance is greater than the fog limit, then we are good
 						bad = false
-						break // Might have broken code here
+						break // break out of the loop
 					} else {
-						bad = true
+						bad = true // to close, try again
 					}
 				}
 			}
-			if !bad {
+			if !bad { // If we are not too close to another system, then we are good
 				break
 			}
 		}
-		name := "Unknown System " + strconv.Itoa(i)
+		name := "Unknown System " + strconv.Itoa(i) // Set the name of the system to a generic name.
 		s.Name = name
-		Systems = append(Systems, s)
+		Systems = append(Systems, s) // Add the system to the Systems array
 	}
 
-	fmt.Println()
+	fmt.Println("System Generation Complete.")
 
-	planetcount := 0
-	fmt.Println("Creating planets in memory.")
-	fmt.Println("universesystems:", universesystems)
+	planetcount := 0 // Planet counter
+	// Loop through the number of systems to create planets
 	for i := 0; i < universesystems; i++ {
-		np := rnd.Intn(7) + 1
+		np := rnd.Intn(7) + 1 // Number of planets in the system
 		for j := 0; j < np; j++ {
-			pl := NewPlanet()
-			pl.ID = planetcount
-			pl.SystemID = i
-			name := "System " + strconv.Itoa(i) + " Planet " + strconv.Itoa(j)
+			pl := NewPlanet()                                                  // Create a new planet
+			pl.GlobalID = planetcount                                          // Set the global ID to the current planet count
+			pl.ID = j + 1                                                      // Set the planet ID to the current loop number.
+			pl.SystemID = i                                                    // Set the system ID to the current loop number. Future indexes will have to match system and planet ID
+			name := "System " + strconv.Itoa(i) + " Planet " + strconv.Itoa(j) // Generic name for the planet
 			pl.Name = name
-			pl.PType = rnd.Intn(9) + 1
-			pl.PlayerID = -1
-			Planets = append(Planets, pl)
+			pl.PType = rnd.Intn(9) + 1    // Random planet type
+			pl.PlayerID = -1              // No player owns the planet
+			Planets = append(Planets, pl) // Add the planet to the Planets array
 			planetcount++
 		}
 	}
 
-	fmt.Println()
 	fmt.Println("Planet Count:", planetcount)
 
 	// Human player
 	player := NewDBPlayer()
 	player.ID = 0
 	player.Name = "Unknown"
-	player.HomeWorldID = rnd.Intn(planetcount)
+	player.HomeWorldID = rnd.Intn(planetcount) // Random home world. This is the GlobalID of the planet.
 	player.Username = "Unknown"
 	player.Password = "Unknown"
 	player.Race = 0
@@ -135,12 +142,16 @@ func CreateUniverse(universesystems int) {
 	Players = append(Players, player)
 	Planets[player.HomeWorldID].PlayerID = player.ID
 
+	// Should this be game specific?
 	fmt.Println("Creating a few NPCs. Player 0 is always human player.")
 	pc := rnd.Intn(3) + 5
 	fmt.Println("Number of NPCs:", pc)
 	for i := 1; i < pc; i++ {
 		fmt.Print(i, " ")
-		np := NewDBPlayer()
+
+		// Set the player to be X from another player.
+
+		np := NewDBPlayer() // Create a new player
 		np.ID = i
 		np.Name = "AI_" + strconv.Itoa(i) // Generic name
 		np.HomeWorldID = rnd.Intn(planetcount)
@@ -160,6 +171,16 @@ func CreateUniverse(universesystems int) {
 	InsertPlanets() // Small little sub function to loop over the slice of planets.
 	InsertPlayers() // Small little sub function to loop over the slice of players.
 
+}
+
+// Returns the SystemID of a planet based on the GlobalID
+func GetSystemIDFromGlobalID(gid int) int {
+	for _, v := range Planets {
+		if v.GlobalID == gid {
+			return v.SystemID
+		}
+	}
+	return -1
 }
 
 // Insert systems into the database. This sub function is needed to loop over the slice of systems.

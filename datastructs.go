@@ -3,6 +3,7 @@ package main
 // Main data structure for the players.
 type Planet struct {
 	ID               int    // SQL Id and In systm Id
+	GlobalID         int    // Id of planet in the universe. Should be unique. System use only.
 	SystemID         int    // Id of system this planet is in.
 	PType            int    //  0 - 9
 	PlayerID         int    // Id of player that controls this planet.
@@ -45,7 +46,7 @@ type DBPlayer struct {
 	Username    string
 	Password    string
 	Email       string
-	HomeWorldID int
+	HomeWorldID int // ID of the players home world. This can change if the player sishes it.
 	AI          bool
 	Race        int
 }

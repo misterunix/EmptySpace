@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"log"
+	"math/rand"
 
 	"fmt"
 	"strconv"
@@ -55,11 +56,16 @@ func NewDBPlayer() DBPlayer {
 // Number of systems and planets are created based on the input 'universesystems'
 func CreateUniverse(universesystems int) {
 	fmt.Println("Creating systems in memory")
+
 	fmt.Println("universesystems:", universesystems)
-	universesize := int(float64(universesystems) * 0.5)
-	fmt.Println("universesize:", universesize)
-	universefog := int(float64(universesize) * 0.03)
-	fmt.Println("universefog:", universefog)
+
+	// The HexGrid Q,R are number is given a bit of randomness to make the universe look more natural.
+	tr := rand.Float64() * 0.1
+	universesize := int(float64(universesystems) * (0.4 + tr))
+	fmt.Println("Universe Q,R size:", universesize)
+
+	universefog := int(float64(universesize) * 0.03) // How far away systems can be from each other
+	fmt.Println("Universe Fog:", universefog)
 
 	for i := 0; i < universesystems; i++ {
 		s := NewSystem()
@@ -111,13 +117,12 @@ func CreateUniverse(universesystems int) {
 			Planets = append(Planets, pl)
 			planetcount++
 		}
-
 	}
 
 	fmt.Println()
-
 	fmt.Println("Planet Count:", planetcount)
 
+	// Human player
 	player := NewDBPlayer()
 	player.ID = 0
 	player.Name = "Unknown"
@@ -137,25 +142,23 @@ func CreateUniverse(universesystems int) {
 		fmt.Print(i, " ")
 		np := NewDBPlayer()
 		np.ID = i
-		np.Name = "AI_" + strconv.Itoa(i)
+		np.Name = "AI_" + strconv.Itoa(i) // Generic name
 		np.HomeWorldID = rnd.Intn(planetcount)
-		np.Username = "AI_" + strconv.Itoa(i)
+		np.Username = "AI_" + strconv.Itoa(i) // Generic username
 		np.Race = rnd.Intn(9) + 1
-		np.Email = "ai@skynet.net"
+		np.Email = "ai@skynet.net" // Silly little email address. Not used for anything.
 		sha := sha256.New()
 		sha.Write([]byte("BadPassword"))
 		cp := fmt.Sprintf("%x", sha.Sum(nil))
 		np.Password = cp
-		//fmt.Println(np)
-		Players = append(Players, np)
-		//fmt.Println(np.Name, np.Password)
-		Planets[np.HomeWorldID].PlayerID = i
+		Players = append(Players, np)        // Add the player to the slice of players.
+		Planets[np.HomeWorldID].PlayerID = i // Set the planet owner to the player ID.
 	}
 	fmt.Println()
-	fmt.Println("Saving systems to DB")
-	InsertSystems()
-	InsertPlanets()
-	InsertPlayers()
+	fmt.Println("Saving systems to the database.")
+	InsertSystems() // Small little sub function to loop over the slice of systems.
+	InsertPlanets() // Small little sub function to loop over the slice of planets.
+	InsertPlayers() // Small little sub function to loop over the slice of players.
 
 }
 
@@ -163,7 +166,7 @@ func CreateUniverse(universesystems int) {
 // Easier to do it this way than to try to loop over the slice in the main function.
 func InsertSystems() {
 
-	fmt.Println("InsertSystems")
+	fmt.Println("Inserting systems into the database.")
 
 	// Begin and Commit are needed to speed up the insert process.
 	o := "BEGIN;\n"
@@ -176,6 +179,7 @@ func InsertSystems() {
 		log.Panicln(err)
 	}
 
+	// Loop over the slice of systems and call the InsertIntoTable function to create the SQL statement.
 	for _, v := range Systems {
 		tmpsql := InsertIntoTable("system", v)
 		//fmt.Println(tmpsql)
@@ -195,9 +199,11 @@ func InsertSystems() {
 
 }
 
+// Insert planets into the database. This sub function is needed to loop over the slice of planets.
+// Easier to do it this way than to try to loop over the slice in the main function.
 func InsertPlanets() {
 
-	fmt.Println("Inserting planets")
+	fmt.Println("Inserting planets into the database.")
 
 	// Begin and Commit are needed to speed up the insert process.
 	o := "BEGIN;\n"
@@ -210,6 +216,7 @@ func InsertPlanets() {
 		log.Panicln(err)
 	}
 
+	// Loop over the slice of planets and call the InsertIntoTable function to create the SQL statement.
 	for _, v := range Planets {
 		tmpsql := InsertIntoTable("planet", v)
 		//fmt.Println(tmpsql)
@@ -229,9 +236,11 @@ func InsertPlanets() {
 
 }
 
+// Insert players into the database. This sub function is needed to loop over the slice of players.
+// Easier to do it this way than to try to loop over the slice in the main function.
 func InsertPlayers() {
 
-	fmt.Println("Inserting players")
+	fmt.Println("Inserting players into the database.")
 	fmt.Println("Count:", len(Players))
 
 	// Begin and Commit are needed to speed up the insert process.
@@ -245,6 +254,7 @@ func InsertPlayers() {
 		log.Panicln(err)
 	}
 
+	// Loop over the slice of players and call the InsertIntoTable function to create the SQL statement.
 	for _, v := range Players {
 		tmpsql := InsertIntoTable("player", v)
 		//fmt.Println(tmpsql)

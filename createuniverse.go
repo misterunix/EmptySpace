@@ -11,7 +11,7 @@ import (
 	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/pmcxs/hexgrid"
+	"github.com/misterunix/hexgrid"
 )
 
 var database *sql.DB   // Database connection

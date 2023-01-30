@@ -52,7 +52,7 @@ type DBPlayer struct {
 	ID           int
 	Name         string
 	Username     string
-	Password     string
+	Password     string // hash of the password
 	Email        string
 	HomeWorldID  int // ID of the players home world. This can change if the player wishes it.
 	HomeSystemID int // ID of the players home system. This can change if the player wishes it.

@@ -105,6 +105,7 @@ func CreateUniverse(universesystems int) {
 		}
 		name := "Unknown System " + strconv.Itoa(i) // Set the name of the system to a generic name.
 		s.Name = name
+		s.Owner = -1                 // No one owns the system
 		Systems = append(Systems, s) // Add the system to the Systems array
 	}
 
@@ -140,7 +141,9 @@ func CreateUniverse(universesystems int) {
 	player.ID = 0
 	player.Name = "Unknown"
 	player.HomeWorldID = rnd.Intn(planetcount) // Random home world. This is the GlobalID of the planet.
-	//tmpSystemID := GetSystemIDFromGlobalID(player.HomeWorldID)
+	tmpSystemID := GetSystemIDFromGlobalID(player.HomeWorldID)
+	player.HomeSystemID = tmpSystemID
+	Systems[tmpSystemID].Owner = player.ID
 	player.Username = "Unknown"
 	player.Password = "Unknown"
 	player.Race = 0
@@ -151,15 +154,20 @@ func CreateUniverse(universesystems int) {
 
 	// Should this be game specific?
 	fmt.Println("Creating a few NPCs. Player 0 is always human player.")
-	pc := rnd.Intn(3) + 5
+	pc := 25 // rnd.Intn(3) + 5
 	fmt.Println("Number of NPCs:", pc)
 	for i := 1; i < pc; i++ {
 		fmt.Print(i, " ")
-
+		var tmpRandPlanet int
+		var tmpSystemID int
 		// Start with a random planet and check if is the minDistance away from all other players.
 		for {
-			tmpRandPlanet := rnd.Intn(planetcount)
-			tmpSystemID := GetSystemIDFromGlobalID(tmpRandPlanet)
+			tmpRandPlanet = rnd.Intn(planetcount)
+			tmpSystemID = GetSystemIDFromGlobalID(tmpRandPlanet)
+			// make sure the system is not owned by another player
+			if Systems[tmpSystemID].Owner != -1 {
+				continue
+			}
 			A := hexgrid.NewHex(Systems[tmpSystemID].Q, Systems[tmpSystemID].R)
 			var abort bool = false
 			for _, loopPlayer := range Players {
@@ -184,7 +192,9 @@ func CreateUniverse(universesystems int) {
 		np := NewDBPlayer() // Create a new player
 		np.ID = i
 		np.Name = "AI_" + strconv.Itoa(i) // Generic name
-		np.HomeWorldID = rnd.Intn(planetcount)
+		// Since systems are created first, we can use the system ID to get the global ID of the planet.
+		np.HomeWorldID = tmpRandPlanet
+		np.HomeSystemID = tmpSystemID
 		np.Username = "AI_" + strconv.Itoa(i) // Generic username
 		np.Race = rnd.Intn(9) + 1
 		np.Email = "ai@skynet.net" // Silly little email address. Not used for anything.

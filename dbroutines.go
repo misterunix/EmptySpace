@@ -32,9 +32,29 @@ func CreateTableFromStruct(table string, s interface{}) string {
 			} else {
 				vt = "INTEGER"
 			}
+		case reflect.Int8:
+			vt = "INTEGER"
+		case reflect.Int16:
+			vt = "INTEGER"
+		case reflect.Int32:
+			vt = "INTEGER"
+		case reflect.Int64:
+			vt = "INTEGER"
+		case reflect.Uint:
+			vt = "INTEGER"
+		case reflect.Uint8:
+			vt = "INTEGER"
+		case reflect.Uint16:
+			vt = "INTEGER"
+		case reflect.Uint32:
+			vt = "INTEGER"
+		case reflect.Uint64:
+			vt = "INTEGER"
 		case reflect.String:
 			vt = "TEXT"
 		case reflect.Float64:
+			vt = "REAL"
+		case reflect.Float32:
 			vt = "REAL"
 		case reflect.Bool:
 			vt = "INTEGER"
@@ -68,14 +88,34 @@ func InsertIntoTable(table string, s interface{}) string {
 		middlesql1 += varName + ","
 
 		// This is my normal way of working with reflect. Strings may be slower but easier to read.
-		switch varType.Name() {
-		case "int":
+		switch varType.Kind() {
+		case reflect.Int:
 			middlesql2 += fmt.Sprintf("%d", varValue.(int)) + ","
-		case "string":
+		case reflect.Int8:
+			middlesql2 += fmt.Sprintf("%d", varValue.(int8)) + ","
+		case reflect.Int16:
+			middlesql2 += fmt.Sprintf("%d", varValue.(int16)) + ","
+		case reflect.Int32:
+			middlesql2 += fmt.Sprintf("%d", varValue.(int32)) + ","
+		case reflect.Int64:
+			middlesql2 += fmt.Sprintf("%d", varValue.(int64)) + ","
+		case reflect.Uint:
+			middlesql2 += fmt.Sprintf("%d", varValue.(uint)) + ","
+		case reflect.Uint8:
+			middlesql2 += fmt.Sprintf("%d", varValue.(uint8)) + ","
+		case reflect.Uint16:
+			middlesql2 += fmt.Sprintf("%d", varValue.(uint16)) + ","
+		case reflect.Uint32:
+			middlesql2 += fmt.Sprintf("%d", varValue.(uint32)) + ","
+		case reflect.Uint64:
+			middlesql2 += fmt.Sprintf("%d", varValue.(uint64)) + ","
+		case reflect.String:
 			middlesql2 += "'" + varValue.(string) + "',"
-		case "float64":
+		case reflect.Float32:
 			middlesql2 += fmt.Sprintf("%f", varValue.(float64)) + ","
-		case "bool":
+		case reflect.Float64:
+			middlesql2 += fmt.Sprintf("%f", varValue.(float64)) + ","
+		case reflect.Bool:
 			middlesql2 += fmt.Sprintf("%v", varValue.(bool)) + ","
 		default:
 			return ""

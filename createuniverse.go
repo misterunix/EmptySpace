@@ -52,22 +52,16 @@ func NewDBPlayer() DBPlayer {
 	return p
 }
 
-// Create the universe in memory to make it faster and easier to check for collisions.
-// Populate items in the database.
-// Creates a new database if one does not exist.
-// Number of systems and planets are created based on the input 'universesystems'
-func CreateUniverse(universesystems int) {
-	fmt.Println("Creating systems in memory")
-
+// Create systems
+func CreateSystems(universesystems int) {
 	fmt.Println("universesystems:", universesystems)
 
-	// The HexGrid Q,R are number is given a bit of randomness to make the universe look more natural.
 	tr := rand.Float64() * 0.1
 	universesize := int(float64(universesystems) * (0.4 + tr))
 	fmt.Println("Universe Q,R size:", universesize)
 
-	universefog := int(float64(universesize) * 0.03) // How far away systems can be from each other
-	fmt.Println("Universe Fog:", universefog)
+	universeMinDistance := int(float64(universesize) * 0.03) // How far away systems can be from each other
+	fmt.Println("Universe Fog:", universeMinDistance)
 
 	// Loop through the number of systems to create
 	for i := 0; i < universesystems; i++ {
@@ -91,7 +85,7 @@ func CreateUniverse(universesystems int) {
 					B := hexgrid.NewHex(Systems[j].Q, Systems[j].R) // Create a new hexgrid location, based on the system we are comparing to. Limited by the current loop number
 					C := hexgrid.HexDistance(A, B)                  // Get the distance between the two hexgrid locations
 
-					if C > universefog { // If the distance is greater than the fog limit, then we are good
+					if C > universeMinDistance { // If the distance is greater than the fog limit, then we are good
 						bad = false
 						break // break out of the loop
 					} else {
@@ -111,29 +105,39 @@ func CreateUniverse(universesystems int) {
 
 	fmt.Println("System Generation Complete.")
 
-	planetcount := 0 // Planet counter
+}
+
+// Create planets
+func CreatePlanets(universesystems int) int {
+
+	var planetcount int // Planet counter
+
 	// Loop through the number of systems to create planets
 	for i := 0; i < universesystems; i++ {
-		np := rnd.Intn(7) + 1 // Number of planets in the system
-		for j := 0; j < np; j++ {
-			pl := NewPlanet()                                                  // Create a new planet
-			pl.GlobalID = planetcount                                          // Set the global ID to the current planet count
-			pl.ID = j + 1                                                      // Set the planet ID to the current loop number.
-			pl.SystemID = i                                                    // Set the system ID to the current loop number. Future indexes will have to match system and planet ID
+
+		numberofplanets := rnd.Intn(7) + 1 // Number of planets in the system
+
+		for j := 0; j < numberofplanets; j++ {
+			pl := NewPlanet() // Create a new planet
+			pl.ID = planetcount
+			pl.SystemID = i
 			name := "System " + strconv.Itoa(i) + " Planet " + strconv.Itoa(j) // Generic name for the planet
 			pl.Name = name
 			pl.PType = rnd.Intn(9) + 1    // Random planet type
 			pl.PlayerID = -1              // No player owns the planet
 			Planets = append(Planets, pl) // Add the planet to the Planets array
-			planetcount++
+			planetcount++                 // Increment the planet counter
 		}
 	}
 
-	fmt.Println("Planet Count:", planetcount)
+	fmt.Println("Planet Generation Complete.")
+	fmt.Println("Number of Planets:", planetcount)
+	return planetcount
+}
 
-	// calculate the minumum distance between players.
-	// This is used to make sure players are not too close to each other.
-	// This is not perfect, but it works for now.
+// Create Players
+func CreatePlayers(universesystems int, planetcount int) {
+	fmt.Println("Creating Players")
 	minDistance := int(math.Sqrt(float64(universesystems)))
 
 	// Human player
@@ -152,8 +156,7 @@ func CreateUniverse(universesystems int) {
 	Players = append(Players, player)
 	Planets[player.HomeWorldID].PlayerID = player.ID
 
-	// Should this be game specific?
-	fmt.Println("Creating a few NPCs. Player 0 is always human player.")
+	// AI players
 	pc := 25 // rnd.Intn(3) + 5
 	fmt.Println("Number of NPCs:", pc)
 	for i := 1; i < pc; i++ {
@@ -168,13 +171,16 @@ func CreateUniverse(universesystems int) {
 			if Systems[tmpSystemID].Owner != -1 {
 				continue
 			}
-			A := hexgrid.NewHex(Systems[tmpSystemID].Q, Systems[tmpSystemID].R)
+
+			A := hexgrid.NewHex(Systems[tmpSystemID].Q, Systems[tmpSystemID].R) // Create a new hexgrid location
 			var abort bool = false
-			for _, loopPlayer := range Players {
-				t1 := loopPlayer.HomeWorldID
+
+			for _, tmpPlayer := range Players {
+				t1 := tmpPlayer.HomeWorldID
 				t2 := GetSystemIDFromGlobalID(t1)
 				B := hexgrid.NewHex(Systems[t2].Q, Systems[t2].R)
 				C := hexgrid.HexDistance(A, B)
+				//fmt.Println("Distance:", C)
 				if C >= minDistance {
 					abort = true
 				} else {
@@ -186,8 +192,6 @@ func CreateUniverse(universesystems int) {
 				break
 			}
 		}
-
-		// Set the player to be X from another player.
 
 		np := NewDBPlayer() // Create a new player
 		np.ID = i
@@ -204,8 +208,22 @@ func CreateUniverse(universesystems int) {
 		np.Password = cp
 		Players = append(Players, np)        // Add the player to the slice of players.
 		Planets[np.HomeWorldID].PlayerID = i // Set the planet owner to the player ID.
+		fmt.Println(np)
+
 	}
-	fmt.Println()
+}
+
+// Create the universe in memory to make it faster and easier to check for collisions.
+// Populate items in the database.
+// Creates a new database if one does not exist.
+// Number of systems and planets are created based on the input 'universesystems'
+func CreateUniverse(universesystems int) {
+	fmt.Println("Creating systems in memory")
+
+	CreateSystems(universesystems)                // Create the systems in memory
+	planetCount := CreatePlanets(universesystems) // Create the planets in memory
+	CreatePlayers(universesystems, planetCount)   // Create the players in memory
+
 	fmt.Println("Saving systems to the database.")
 	InsertSystems() // Small little sub function to loop over the slice of systems.
 	InsertPlanets() // Small little sub function to loop over the slice of planets.
@@ -215,8 +233,10 @@ func CreateUniverse(universesystems int) {
 
 // Returns the SystemID of a planet based on the GlobalID
 func GetSystemIDFromGlobalID(gid int) int {
+	fmt.Println("Getting system ID from global ID:", gid)
 	for _, v := range Planets {
-		if v.GlobalID == gid {
+		if v.ID == gid {
+			fmt.Println("System ID:", v.SystemID)
 			return v.SystemID
 		}
 	}
@@ -280,7 +300,7 @@ func InsertPlanets() {
 	// Loop over the slice of planets and call the InsertIntoTable function to create the SQL statement.
 	for _, v := range Planets {
 		tmpsql := InsertIntoTable("planet", v)
-		//fmt.Println(tmpsql)
+		fmt.Println(tmpsql)
 		statement, _ := database.Prepare(tmpsql)
 		statement.Exec()
 	}

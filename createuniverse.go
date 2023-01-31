@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha256"
-	"database/sql"
 	"log"
 	"math"
 	"math/rand"
@@ -14,7 +13,7 @@ import (
 	"github.com/misterunix/hexgrid"
 )
 
-var database *sql.DB   // Database connection
+// var database *sql.DB   // Database connection
 var Systems []System   // All systems in the universe
 var Planets []Planet   // All planets in the universe
 var Players []DBPlayer // All players in the universe. Including NPCs
@@ -155,6 +154,21 @@ func CreatePlayers(universesystems int, planetcount int) {
 	player.AI = false
 	Players = append(Players, player)
 	Planets[player.HomeWorldID].PlayerID = player.ID
+	Planets[player.HomeWorldID].SpacePort = 1
+	Planets[player.HomeWorldID].ScoutShips = 10
+	Planets[player.HomeWorldID].ColonyShips = 10
+	Planets[player.HomeWorldID].Goverment = 10
+	Planets[player.HomeWorldID].Population = 1000000
+	Planets[player.HomeWorldID].RawFood = 1000000
+	Planets[player.HomeWorldID].RawOre = 1000000
+	Planets[player.HomeWorldID].ProcessedFood = 1000000
+	Planets[player.HomeWorldID].ProcessedOre = 1000000
+	Planets[player.HomeWorldID].Research = 10
+	Planets[player.HomeWorldID].SublightFuel = 1000000
+	Planets[player.HomeWorldID].JumpFuel = 1000000
+	Planets[player.HomeWorldID].Farming = 40
+	Planets[player.HomeWorldID].Manufacturing = 50
+	Planets[player.HomeWorldID].TechLevel = 20
 
 	// AI players
 	pc := 25 // rnd.Intn(3) + 5
@@ -356,8 +370,6 @@ func InsertPlayers() {
 }
 
 func CreateNewDB() {
-
-	database, _ = sql.Open("sqlite3", "sqldata/emptyspace.db") // this should be in a config file
 
 	statement, _ := database.Prepare("DROP TABLE IF EXISTS system")
 	_, err := statement.Exec()

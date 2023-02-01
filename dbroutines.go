@@ -127,3 +127,58 @@ func InsertIntoTable(table string, s interface{}) string {
 	yyy := middlesql1 + middlesql2
 	return yyy
 }
+
+func UpdateRow(table string, v map[string]any, where string) string {
+
+	var sql1, sql2, sql3 string
+	sql1 = "UPDATE " + table + " SET "
+
+	for p, c := range v {
+		switch c.(type) {
+		case int:
+			sql2 += p + " = " + fmt.Sprintf("%d", c) + ","
+		case int8:
+			sql2 += p + " = " + fmt.Sprintf("%d", c) + ","
+		case int16:
+			sql2 += p + " = " + fmt.Sprintf("%d", c) + ","
+		case int32:
+			sql2 += p + " = " + fmt.Sprintf("%d", c) + ","
+		case int64:
+			sql2 += p + " = " + fmt.Sprintf("%d", c) + ","
+		case uint:
+			sql2 += p + " = " + fmt.Sprintf("%d", c) + ","
+		case uint8:
+			sql2 += p + " = " + fmt.Sprintf("%d", c) + ","
+		case uint16:
+			sql2 += p + " = " + fmt.Sprintf("%d", c) + ","
+		case uint32:
+			sql2 += p + " = " + fmt.Sprintf("%d", c) + ","
+		case uint64:
+			sql2 += p + " = " + fmt.Sprintf("%d", c) + ","
+		case string:
+			sql2 += p + " = " + "'" + fmt.Sprintf("%s", c) + "'" + ","
+		case float32:
+			sql2 += p + " = " + fmt.Sprintf("%f", c) + ","
+		case float64:
+			sql2 += p + " = " + fmt.Sprintf("%f", c) + ","
+		case bool:
+			sql2 += p + " = " + fmt.Sprintf("%v", c) + ","
+		default:
+			return ""
+		}
+
+	}
+
+	sql3 = sql1 + sql2 + " WHERE " + where + ";"
+	return sql3
+
+}
+
+func RemoveRow(table string, where string) string {
+
+	var sql1, sql2 string
+	sql1 = "DELETE FROM " + table + " WHERE "
+	sql2 = sql1 + where + ";"
+	return sql2
+
+}
